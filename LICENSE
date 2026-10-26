@@ -1,0 +1,9 @@
+SDK license information
+
+This file documents the existing source package's licensing metadata. It does
+not create an open-source license or grant additional rights. The existing
+Python/PHP/JavaScript metadata identifies proprietary licensing; the C# project
+does not declare a separate package license. Use and redistribution are governed
+by the applicable agreement with KDPika. Contact hi@kdpika.com for the terms
+that apply to your integration or redistribution. No public registry release,
+public repository or general redistribution grant is asserted by this file.

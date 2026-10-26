@@ -1,0 +1,22 @@
+{
+  "name": "@kdpika/license-sdk",
+  "version": "2.0.0",
+  "description": "KDPika Licensing JavaScript SDK for Node.js and Electron main processes",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": "./src/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "files": [
+    "src/",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "homepage": "https://licensing.kdpika.com/docs/v1/sdks/javascript"
+}
