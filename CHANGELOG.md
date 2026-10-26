@@ -1,4 +1,4 @@
-# Current release: 2.0.0
+# Current release: 2.0.1
 
 - Required signed hardware binding, floating checkout/heartbeat/checkin and online idempotent usage credits.
 - Updated installation, source links and cross-language capability documentation.
@@ -6,7 +6,7 @@
 
 # Package observations and documentation changes
 
-## 2.0.0 — 2026-10-26
+## 2.0.1 — 2026-10-26
 
 - Require product-salted hardware hashes and verify signed device/installation binding.
 - Add floating checkout, heartbeat and checkin with signed lease expiry and seat exhaustion.

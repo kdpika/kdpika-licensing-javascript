@@ -1,8 +1,8 @@
 # KDPika Licensing JavaScript SDK
 
-Official SDK **2.0.0** for the current KDPika API contract.
+Official SDK **2.0.1** for the current KDPika API contract.
 
-[Documentation](https://licensing.kdpika.com/docs/v1/sdks/javascript) · [Download SDK ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.0.0.zip)
+[Documentation](https://licensing.kdpika.com/docs/v1/sdks/javascript) · [Download SDK ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.0.1.zip)
 
 ## Supported licensing capabilities
 
@@ -19,7 +19,7 @@ Advanced matching, floating seats, credits and portal availability depend on you
 ## Install
 
 ```sh
-npm install ./kdpika-license-sdk-2.0.0.tgz
+npm install ./kdpika-license-sdk-2.0.1.tgz
 ```
 
 For JavaScript and C#, local package/source downloads are available; npm/NuGet publication is separate and must be confirmed before using a registry-only install command.

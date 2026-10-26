@@ -1,6 +1,6 @@
 {
   "name": "@kdpika/license-sdk",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "KDPika Licensing JavaScript SDK for Node.js and Electron main processes",
   "type": "module",
   "main": "src/index.js",
@@ -11,12 +11,19 @@
   "scripts": {
     "test": "node --test"
   },
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "files": [
     "src/",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
   ],
-  "homepage": "https://licensing.kdpika.com/docs/v1/sdks/javascript"
+  "homepage": "https://licensing.kdpika.com/docs/v1/sdks/javascript",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kdpika/kdpika-licensing-javascript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kdpika/kdpika-licensing-javascript/issues"
+  }
 }
