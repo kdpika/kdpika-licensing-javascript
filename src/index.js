@@ -1,3 +1,4 @@
+import {applicationAllowed} from "./applications.js";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -25,17 +26,19 @@ export class LicenseResult {
 }
 
 export class LicenseClient {
-  constructor({product, environment = "LIVE", baseUrl = "https://licensing.kdpika.com", applicationName = "Licensed Application", applicationVersion = "", verificationKey = null, storageDir = null, timeoutMs = 15000, fetchImpl = globalThis.fetch, clock = () => new Date()}) {
+  constructor({product, environment = "LIVE", baseUrl = "https://licensing.kdpika.com", applicationName = "Licensed Application", applicationVersion = "", applicationType = "desktop", verificationKey = null, storageDir = null, timeoutMs = 15000, fetchImpl = globalThis.fetch, clock = () => new Date()}) {
     if (!String(product ?? "").trim()) throw new Error("A Public App ID is required.");
     if (!safeBaseUrl(baseUrl)) throw new Error("The API base URL must use HTTPS; loopback HTTP is allowed for development.");
     const normalized = ({PRODUCTION: "LIVE", TEST: "SANDBOX"})[String(environment).toUpperCase()] ?? String(environment).toUpperCase();
     if (!["SANDBOX", "LIVE"].includes(normalized)) throw new Error("Environment must be SANDBOX or LIVE.");
     if (verificationKey && (!verificationKey.key_id || !verificationKey.public_key)) throw new Error("Pinned verification key is incomplete.");
     if (typeof fetchImpl !== "function") throw new Error("A fetch implementation is required.");
+    if (!["desktop","web"].includes(applicationType)) throw new Error("Application type must be desktop or web.");
+    this.applicationType=applicationType;
     this.product = product.trim(); this.environment = normalized; this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.applicationName = applicationName; this.applicationVersion = applicationVersion; this.verificationKey = verificationKey;
     this.timeoutMs = timeoutMs; this.fetchImpl = fetchImpl; this.clock = clock;
-    const namespace = crypto.createHash("sha256").update(`${this.baseUrl.toLowerCase()}|${this.product}|${this.environment}`).digest("hex").slice(0, 20);
+    const namespace = crypto.createHash("sha256").update(`${this.baseUrl.toLowerCase()}|${this.product}|${this.environment}|${this.applicationType}`).digest("hex").slice(0, 20);
     this.storageDir = path.join(storageDir ?? defaultStorageDir(applicationName), namespace);
     fs.mkdirSync(this.storageDir, {recursive: true, mode: 0o700}); try { fs.chmodSync(this.storageDir, 0o700); } catch {}
     const identity = this.readJson("installation.json");
@@ -186,6 +189,7 @@ export class LicenseClient {
     const rawKey = decodeBase64Url(key.public_key); const spki = Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), rawKey]);
     if (!crypto.verify(null, Buffer.from(encoded??canonicalJson(payload)), {key: spki, format: "der", type: "spki"}, decodeBase64Url(signature))) throw new Error("The license signature is invalid.");
     if (payload.product_id !== this.product || String(payload.environment ?? "").toUpperCase() !== this.environment) throw new Error("The signed license belongs to another product or environment.");
+    if (!applicationAllowed(payload,this.applicationType)) return this.error("APPLICATION_NOT_ALLOWED","This license does not include this type of app.",source,response,payload,true);
     const expected = crypto.createHash("sha256").update(this.installationId).digest("hex");
     if (payload.device?.installation_hash !== expected) throw new Error("The signed license belongs to another installation.");
     if (!fingerprint) {
@@ -226,7 +230,7 @@ export class LicenseClient {
   async request(method, endpoint, body, headers) {
     const controller = new AbortController(), timeout = setTimeout(()=>controller.abort(), this.timeoutMs);
     try {
-      const response = await this.fetchImpl(this.baseUrl + endpoint, {method, redirect:"manual", headers:{Accept:"application/json","User-Agent":"KDPika-JavaScript-SDK/1.0.1",...(body!==null?{"Content-Type":"application/json"}:{}),...headers}, body:body===null?undefined:JSON.stringify(body), signal:controller.signal});
+      const response = await this.fetchImpl(this.baseUrl + endpoint, {method, redirect:"manual", headers:{"X-Application-Type":this.applicationType,Accept:"application/json","User-Agent":"KDPika-JavaScript-SDK/1.0.1",...(body!==null?{"Content-Type":"application/json"}:{}),...headers}, body:body===null?undefined:JSON.stringify(body), signal:controller.signal});
       let decoded; try { decoded = await response.json(); } catch { decoded={success:false,error:{code:"INVALID_RESPONSE",message:"The server returned an invalid response."}}; }
       if(!decoded||typeof decoded!=="object"||Array.isArray(decoded))decoded={success:false,error:{code:"INVALID_RESPONSE",message:"The server returned an invalid response."}};
       return {ok:response.ok&&decoded.success===true,status:response.status,body:decoded};

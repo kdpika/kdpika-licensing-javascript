@@ -1,8 +1,31 @@
 # KDPika Licensing JavaScript SDK
 
-Official SDK **2.0.1** for the current KDPika API contract.
+## Desktop / Web plan controls — 2.1.0
 
-[Documentation](https://licensing.kdpika.com/docs/v1/sdks/javascript) · [Download SDK ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.0.1.zip)
+This source adds Business-only per-software-plan app access: `desktop`, `web`, or `both`. Starter and Pro automatically allow both under the same App ID and cannot create app-specific restrictions. It applies equally to subscriptions, one-time purchases and lifetime access. Devices/seats/credits belong to the same license; choosing both does not double its limits.
+
+Configure the host application, not a customer-editable field:
+
+```
+new LicenseClient({product: "YOUR_APP_ID", applicationType: "web", storageDir: "/private/web-license"})
+```
+
+Default: desktop. Configure the other app with the same App ID and key, its own context and private state folder. SDK storage namespaces include the context. All activation/validation/seat/credit requests send `X-Application-Type`, and the SDK checks signed `application_access` plus `application_type` on network and cached results. A scope-restricted license cannot activate without declaring a context. Errors: APPLICATION_NOT_ALLOWED, APPLICATION_TYPE_REQUIRED, APPLICATION_TYPE_MISMATCH, INVALID_APPLICATION_TYPE. Releasing a machine/seat remains possible after a restriction change.
+
+Context is a declaration by trusted application code, not browser/hardware attestation. A user who controls executable code can modify it; valuable online operations need server-side authorization too. Offline clients learn changed policies only on reconnect and must obey the old signed deadline until then. Browser/WASM hardware fallback remains unsupported.
+
+[Download the source ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.1.0.zip) · [Desktop / Web setup and migration](https://licensing.kdpika.com/docs/v1/licensing/application-access)
+
+## Install the current source (npm/NuGet release not configured)
+
+```sh
+npm install --ignore-scripts /path/to/extracted/javascript-sdk
+```
+
+
+Official SDK **2.1.0** for signed licensing, hardware binding, floating seats, metered credits and Desktop / Web access controls.
+
+[Documentation](https://licensing.kdpika.com/docs/v1/sdks/javascript) · [Download SDK ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.1.0.zip)
 
 ## Supported licensing capabilities
 
@@ -19,7 +42,7 @@ Advanced matching, floating seats, credits and portal availability depend on you
 ## Install
 
 ```sh
-npm install ./kdpika-license-sdk-2.0.1.tgz
+npm install ./kdpika-license-sdk-2.1.0.tgz
 ```
 
 For JavaScript and C#, local package/source downloads are available; npm/NuGet publication is separate and must be confirmed before using a registry-only install command.
