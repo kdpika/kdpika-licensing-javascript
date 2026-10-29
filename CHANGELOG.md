@@ -1,3 +1,9 @@
+## 2.2.0 — credit codes and top-ups
+
+- Valid active licenses keep included features at zero credits; online billable jobs still require sufficient units.
+- Add credit-pack discovery, secure store checkout, redemption codes, credit history and server-priced actions.
+- Signed decisions, device binding and floating leases remain enforced; no automatic retry of credit mutations.
+
 ## 2.1.0 — application access source update (not registry-published)
 
 - Add desktop/web application context, context-isolated installation state, request header and signed network/cache enforcement.

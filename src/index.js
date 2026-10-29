@@ -19,7 +19,7 @@ export class LicenseResult {
   #allowed() {
     const p=this.#snapshot,now=new Date(this.#clock()),server=timeValue(p.server_time),next=timeValue(p.next_validation_at),grace=timeValue(p.offline_grace_until),expiry=p.expires_at===null?null:timeValue(p.expires_at);
     const seatAllowed=p.floating===null?leaseValid(p,null,now):Boolean(this.#seatGuard?.(p));
-    return creditPolicy(p)&&(!p.metered||(this.source==='online'&&p.credit_balance>0))&&seatAllowed&&this.valid&&this.signatureValid&&p.status==='active'&&Number.isFinite(+now)&&server&&next&&grace&&next>=server&&grace>=server&&(p.expires_at===null||expiry)&&+now+300000>=+server&&(!expiry||now<expiry)&&(['cache','offline'].includes(this.source)?now<=grace:now<next);
+    return creditPolicy(p)&&(!p.metered||(this.source==='online'))&&seatAllowed&&this.valid&&this.signatureValid&&p.status==='active'&&Number.isFinite(+now)&&server&&next&&grace&&next>=server&&grace>=server&&(p.expires_at===null||expiry)&&+now+300000>=+server&&(!expiry||now<expiry)&&(['cache','offline'].includes(this.source)?now<=grace:now<next);
   }
   feature(name, fallback = false) { if(!this.#allowed())return false;const value=this.#snapshot.features?.[name]??fallback;return value===true||(typeof value==='number'&&Number.isFinite(value)&&value>0); }
   featureValue(name, fallback = null) { return this.#allowed()?structuredClone(this.#snapshot.features?.[name]??fallback):null; }
@@ -52,27 +52,44 @@ export class LicenseClient {
   _serialize(operation) {const pending=this._operations.then(operation,operation);this._operations=pending.catch(()=>{});return pending;}
   activate(licenseKey,email=null) {return this._serialize(async()=>{const result=await this._activate(licenseKey,email);this.startHeartbeat(result);return result;});}
   check(forceOnline=false) {return this._serialize(async()=>{const result=await this._check(forceOnline);this.startHeartbeat(result);return result;});}
+  creditPacks() {return this._creditRequest("packs",{});}
+  creditHistory() {return this._creditRequest("history",{});}
+  createCreditCheckout(packId) {return this._creditRequest("checkout",{pack_id:packId});}
+  redeemCredits(code,idempotencyKey) {requestValues(1,idempotencyKey,null);if(!idempotencyKey||typeof code!=="string")throw new CreditOperationError("INVALID_REQUEST");return this._creditRequest("redeem",{code,idempotency_key:idempotencyKey});}
+  _creditRequest(operation,fields) {return this._serialize(async()=>{
+    const token=this.token();if(!token)throw new CreditOperationError("NOT_ACTIVATED");
+    const fingerprint=collectFingerprint(this.product);let response;
+    try{response=await this.request("POST","/api/v1/credits/"+operation,{...fields,fingerprint,session_token:this.sessionToken()},{Authorization:`Bearer ${token}`,"X-Installation-ID":this.installationId});}catch{throw new CreditOperationError("NETWORK_ERROR");}
+    if(!response.ok)throw new CreditOperationError(response.body?.error?.code);
+    const checked=await this.verified(response.body.license,"online",response,fingerprint);
+    if(!checked.valid||!checked.signatureValid)throw new CreditOperationError(checked.errorCode??"SIGNATURE_INVALID");
+    await this.saveState(response.body.license);const {license,...data}=response.body;data.balance=checked.payload.credit_balance;
+    if(operation==="redeem"){const r=checked.payload.credit_transaction;const expected=crypto.createHash("sha256").update("code:"+crypto.createHash("sha256").update(fields.idempotency_key).digest("hex")).digest("hex");if(r?.type!=="grant"||r.idempotency_hash!==expected||r.id!==data.transaction_id)throw new CreditOperationError("INVALID_RECEIPT");data.added=r.amount;data.replayed=r.replayed;}
+    return Object.freeze(data);
+  });}
   getBalance() {return this._serialize(async()=>{
     const result=await this._check(true);
     if(!result.signatureValid||(!result.valid&&result.errorCode!=="INSUFFICIENT_CREDITS"))throw new CreditOperationError(result.errorCode??undefined);
     if(!result.payload.metered)throw new CreditOperationError("NOT_METERED_LICENSE");
     return result.payload.credit_balance;
   });}
-  consume(amount,idempotencyKey=null,reason=null) {return this._serialize(async()=>{
+  consumeAction(action,idempotencyKey,expectedUnits=1) {return this.consume(expectedUnits,idempotencyKey,null,action);}
+  consume(amount,idempotencyKey=null,reason=null,action=null) {return this._serialize(async()=>{
     requestValues(amount,idempotencyKey,reason);
     const token=this.token();if(!token)throw new CreditOperationError("NOT_ACTIVATED");
     let fingerprint;try{fingerprint=collectFingerprint(this.product);}catch{throw new CreditOperationError("HARDWARE_UNAVAILABLE");}
     let response;
-    try{response=await this.request("POST","/api/v1/licenses/consume",{amount,idempotency_key:idempotencyKey,reason,fingerprint,session_token:this.sessionToken()},{Authorization:`Bearer ${token}`,"X-Installation-ID":this.installationId});}
+    try{response=await this.request("POST","/api/v1/licenses/consume",{amount,action,idempotency_key:idempotencyKey,reason,fingerprint,session_token:this.sessionToken()},{Authorization:`Bearer ${token}`,"X-Installation-ID":this.installationId});}
     catch{throw new CreditOperationError("NETWORK_ERROR");}
     if(!response.ok&&response.body?.error?.code!=="INSUFFICIENT_CREDITS"){this.remove("signed-state.json");throw new CreditOperationError(response.body?.error?.code);}
     let result;try{result=await this.verified(response.body.license,"online",response,fingerprint);}catch{throw new CreditOperationError("SIGNATURE_INVALID");}
     if(!result.signatureValid||(!result.valid&&result.errorCode!=="INSUFFICIENT_CREDITS"))throw new CreditOperationError(result.errorCode??"SIGNATURE_INVALID");
     if(!result.payload.metered)throw new CreditOperationError("NOT_METERED_LICENSE");
     if(!response.ok){
-      if(response.status!==402||result.payload.credit_balance>=amount||response.body.balance!==result.payload.credit_balance)throw new CreditOperationError("INVALID_RECEIPT");
+      if(response.status!==402||(action===null&&result.payload.credit_balance>=amount)||response.body.balance!==result.payload.credit_balance)throw new CreditOperationError("INVALID_RECEIPT");
       await this.saveState(response.body.license);throw new InsufficientCreditsError(result.payload.credit_balance);
     }
+    if(action!==null){const delta=result.payload.credit_transaction?.amount;if(!Number.isSafeInteger(delta)||delta>=0)throw new CreditOperationError("INVALID_RECEIPT");amount=-delta;}
     const receipt=consumption(result.payload,response.body,amount,idempotencyKey);await this.saveState(response.body.license);return receipt;
   });}
   checkout() {return this._serialize(async()=>{const result=await this.seatRequest("checkout");if(result.errorCode==="ALL_SEATS_IN_USE")throw new AllSeatsInUseError();this.startHeartbeat(result);return result;});}
@@ -210,7 +227,6 @@ export class LicenseClient {
     if(!leaseValid(payload,this.sessionToken(),now))return this.error("SESSION_EXPIRED","Your shared seat expired. Connect to reserve a seat again.",source,response,payload,true);
     if(!creditPolicy(payload))return this.error("INVALID_RESPONSE","The credit settings could not be verified.",source,response,payload,true);
     if(payload.metered&&source!=="online")return this.error("METERED_ONLINE_REQUIRED","Connect to the internet to check or use credits.",source,response,payload,true);
-    if(payload.metered&&payload.credit_balance===0)return this.error("INSUFFICIENT_CREDITS","There are not enough credits. Ask the software publisher to add more.",source,response,payload,true);
     return new LicenseResult({valid:true,source,payload,requestId:response?.body?.request_id??null,signatureValid:true,clock:()=>this.now(),seatGuard:snapshot=>leaseValid(snapshot,this.sessionToken(),this.now())});
   }
 

@@ -36,7 +36,6 @@ function fixture(t){
       if(state.drop){state.drop=false;throw new Error("response lost");}
       return reply({success:true,license:signed(receipt),balance:receipt.balance_after+Number(state.tamper),consumed:amount,transaction_id:receipt.id,replayed:receipt.replayed});
     }
-    if(op==="validate"&&state.metered&&state.balance===0)return reply({success:false,error:{code:"INSUFFICIENT_CREDITS"},balance:0,license:signed(null)},402);
     return reply({success:true,activation_token:"act_fixture_only",license:signed(null)});
   };
   const client=new LicenseClient({product:"app_fixture",environment:"SANDBOX",storageDir:directory,clock:()=>now,fetchImpl,verificationKey:{key_id:"ed25519_fixture",public_key:publicKey}});
@@ -49,10 +48,10 @@ test("last-credit receipt succeeds, replay is historical, fresh balance is zero"
   assert.equal((await client.consume(3,"last-job-fixture")).balance,0);
   const replay=await client.consume(2,"first-job-fixture");assert.equal(replay.replayed,true);assert.equal(replay.transactionId,first.transactionId);assert.equal(replay.balance,3);
   assert.equal(await client.getBalance(),0);assert.equal(state.ledger.size,2);
-  const zero=await client.validate();assert.equal(zero.errorCode,"INSUFFICIENT_CREDITS");assert.equal(zero.signatureValid,true);assert.equal(zero.feature("export",true),false);
+  const zero=await client.validate();assert.equal(zero.valid,true);assert.equal(zero.signatureValid,true);assert.equal(zero.feature("export",true),true);
 });
 test("zero activation preserves credentials; top-up needs no reactivation",async t=>{
-  const {client,state}=fixture(t);state.balance=0;assert.equal((await client.activate("CREDIT-FIXTURE")).errorCode,"INSUFFICIENT_CREDITS");assert.equal(client.activated,true);
+  const {client,state}=fixture(t);state.balance=0;assert.equal((await client.activate("CREDIT-FIXTURE")).valid,true);assert.equal(client.activated,true);
   assert.equal(await client.getBalance(),0);state.balance=3;assert.equal(await client.getBalance(),3);
 });
 test("typed insufficient error, conflict and no double charge",async t=>{

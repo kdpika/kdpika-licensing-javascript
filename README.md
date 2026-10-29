@@ -1,6 +1,6 @@
 # KDPika Licensing JavaScript SDK
 
-## Desktop / Web plan controls — 2.1.0
+## Desktop / Web plan controls — 2.2.0
 
 This source adds Business-only per-software-plan app access: `desktop`, `web`, or `both`. Starter and Pro automatically allow both under the same App ID and cannot create app-specific restrictions. It applies equally to subscriptions, one-time purchases and lifetime access. Devices/seats/credits belong to the same license; choosing both does not double its limits.
 
@@ -14,18 +14,18 @@ Default: desktop. Configure the other app with the same App ID and key, its own 
 
 Context is a declaration by trusted application code, not browser/hardware attestation. A user who controls executable code can modify it; valuable online operations need server-side authorization too. Offline clients learn changed policies only on reconnect and must obey the old signed deadline until then. Browser/WASM hardware fallback remains unsupported.
 
-[Download the source ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.1.0.zip) · [Desktop / Web setup and migration](https://licensing.kdpika.com/docs/v1/licensing/application-access)
+[Download the source ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.2.0.zip) · [Desktop / Web setup and migration](https://licensing.kdpika.com/docs/v1/licensing/application-access)
 
 ## Install from npm
 
 ```sh
-npm install @kdpika/license-sdk@2.1.0
+npm install @kdpika/license-sdk@2.2.0
 ```
 
 
-Official SDK **2.1.0** for signed licensing, hardware binding, floating seats, metered credits and Desktop / Web access controls.
+Official SDK **2.2.0** for signed licensing, hardware binding, floating seats, metered credits and Desktop / Web access controls.
 
-[Documentation](https://licensing.kdpika.com/docs/v1/sdks/javascript) · [Published package](https://www.npmjs.com/package/@kdpika/license-sdk/v/2.1.0) · [Download SDK ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.1.0.zip)
+[Documentation](https://licensing.kdpika.com/docs/v1/sdks/javascript) · [Published package](https://www.npmjs.com/package/@kdpika/license-sdk/v/2.2.0) · [Download SDK ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-javascript-sdk-2.2.0.zip)
 
 ## Supported licensing capabilities
 
@@ -42,7 +42,7 @@ Advanced matching, floating seats, credits and portal availability depend on you
 ## Install
 
 ```sh
-npm install ./kdpika-license-sdk-2.1.0.tgz
+npm install ./kdpika-license-sdk-2.2.0.tgz
 ```
 
 For JavaScript and C#, local package/source downloads are available; npm/NuGet publication is separate and must be confirmed before using a registry-only install command.
@@ -93,3 +93,37 @@ Run `npm test` after installing the local package.
 
 See LICENSE for existing license-information boundaries and CHANGELOG.md for verified observations; neither implies an invented public registry release.
 <!-- P7-QUALITY:END -->
+
+
+## Credit codes and store top-ups
+
+These APIs require the matching credit-commerce server update and WooCommerce connector 0.8.0 or later. An active signed online license remains usable at zero credits. Included features and paid operations are separate.
+
+| Language | Available packs | Redeem a code | Store checkout | History | Publisher-priced job |
+|---|---|---|---|---|---|
+| Python | `credit_packs()` | `redeem_credits(code, request_key)` | `create_credit_checkout(pack_id)` | `credit_history()` | `consume_action(action, request_key, expected_units)` |
+| JavaScript (Node/Electron) | `creditPacks()` | `redeemCredits(code, requestKey)` | `createCreditCheckout(packId)` | `creditHistory()` | `consumeAction(action, requestKey, expectedUnits)` |
+| Rust | `credit_packs()` | `redeem_credits(code, request_key)` | `create_credit_checkout(pack_id)` | `credit_history()` | `consume_action(action, request_key, expected_units)` |
+| PHP | `creditPacks()` | `redeemCredits(code, requestKey)` | `createCreditCheckout(packId)` | `creditHistory()` | `consumeAction(action, requestKey, expectedUnits)` |
+| C# | `CreditPacksAsync()` | `RedeemCreditsAsync(code, requestKey)` | `CreateCreditCheckoutAsync(packId)` | `CreditHistoryAsync()` | `ConsumeActionAsync(action, requestKey, expectedUnits)` |
+
+Persist the request key **before** redeeming or consuming. If the response is lost, explicitly retry that same operation with the same key; never create another charge to recover it. Redemption units and balance are read from the signed response. Open `checkout_url` in the normal browser, never embed a developer API key in an app, and refresh the signed balance after returning. Pack prices are estimates; WooCommerce confirms tax, coupons and the actual payable amount.
+
+`CREDIT_CODE_UNAVAILABLE` covers unknown, expired, exhausted or ineligible codes without exposing another account's promotion. `CREDIT_PRICE_CHANGED` makes the app refresh the price and ask for confirmation. `CREDIT_REVIEW_REQUIRED` blocks paid jobs pending publisher review, not the license's included features. Credit consumption remains online-only.
+
+
+## Two practical apps — choose how you learn
+
+Both examples remain available; Sudoku Studio does not replace License Lab.
+
+| Example | Open or download | What it teaches |
+|---|---|---|
+| Original License Lab (PHP) | [Open demo](https://licensing.kdpika.com/license-lab) | Real license activation, signed replies, offline rules, devices and seats |
+| Sudoku Studio (PHP web app) | [Open app](https://licensing.kdpika.com/sudoku-studio) · [Source ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-sudoku-studio-php-1.0.0.zip) · [Step-by-step guide](https://licensing.kdpika.com/docs/v1/tutorials/php/sudoku) | A usable puzzle app with exports, plan features, crown balance, codes and store top-ups on the same license |
+| Sudoku Studio (Python desktop) | [Source ZIP](https://licensing.kdpika.com/docs/downloads/kdpika-sudoku-studio-python-1.3.0.zip) · [Guide](https://licensing.kdpika.com/docs/v1/tutorials/python/desktop) | A PyQt6 desktop app; App ID, email/key and Live/Test are entered in the window |
+
+![Sudoku Studio PHP application](https://licensing.kdpika.com/assets/sudoku/studio-preview.png)
+
+The web app uses the PHP SDK; the desktop app uses the Python SDK. These are app examples, not claims that this package runs another language. The same credit endpoints are supported by all five SDKs. Enter your own software license in the UI, never a platform administration key. JPG is included, PNG uses `png_export`, collections use `batch_generation`, and paid packs use the publisher-priced `create_pack` action. Promotional code KDP100CR is an example: the publisher creates it before it can be redeemed.
+
+A zero balance keeps included tools available. Real store payment confirmation grants units to the original license once; SDK requests cannot grant themselves credits. GitHub hosts the example source/download links, and this package-registry page includes the same guide.
