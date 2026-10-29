@@ -45,7 +45,7 @@ Advanced matching, floating seats, credits and portal availability depend on you
 npm install ./kdpika-license-sdk-2.2.0.tgz
 ```
 
-For JavaScript and C#, local package/source downloads are available; npm/NuGet publication is separate and must be confirmed before using a registry-only install command.
+Version 2.2.0 is published in its official package registry. Versioned source downloads and local package installation remain available.
 
 
 ## Release limitations and trust boundary
